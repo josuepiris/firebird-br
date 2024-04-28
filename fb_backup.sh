@@ -29,7 +29,17 @@
 	INFO="[\e[36;1m INFO \e[m]"
 	WARN="[\e[33;1m WARN \e[m]"
 
-	iptables=`which iptables`
+	# Lista de comandos a verificar
+	DEPENDS=("iptables" "gfix" "gstat" "gbak", "nbackup")
+
+	# Itera sobre a lista de comandos
+	for cmd in "${DEPENDS[@]}"; do
+		# Verifica se o comando está disponível
+		if ! which "$cmd" &>/dev/null; then
+			echo "O comando \"$cmd\" não está disponível. Abortando..."
+			exit 1
+		fi
+	done
 
 	status ()
 	{
@@ -137,7 +147,7 @@
 		}
 
 		echo -e "`date +"%d %b %Y %T"` - $INFO Iniciando a rotina de manutenção (backup/restore) do banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-		$iptables -I INPUT 1 -p tcp --syn --dport 3050 -j REJECT
+		iptables -I INPUT 1 -p tcp --syn --dport 3050 -j REJECT
 
 		n=1
 
@@ -202,7 +212,7 @@
 
 		fi
 
-		$iptables -D INPUT -p tcp --syn --dport 3050 -j REJECT
+		iptables -D INPUT -p tcp --syn --dport 3050 -j REJECT
 		echo -e "\r"
 
 	}
