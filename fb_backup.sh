@@ -41,6 +41,8 @@
 		fi
 	done
 
+	MAILX_LOG="/tmp/${BASENAME}_mailx_`date +'%Y%m%d%H%M'`.log"
+
 	status ()
 	{
 
@@ -56,8 +58,8 @@
 			ERROR="true"
 			echo -e "\e[31;1m error\e[m"
 
-			SUBJECT='Erro durante a execução de uma rotina de backup!'
-			notification
+			ASSUNTO='Erro durante a execução de uma rotina de backup!'
+			enviar_notificacao
 
 		else
 
@@ -67,12 +69,12 @@
 
 	}
 
-	notification ()
+	enviar_notificacao ()
 	{
 
-		which s-nail >/dev/null && MAILD="s-nail" || MAILD="mailx"
+		which s-nail >/dev/null && mailx="s-nail" || mailx="mailx"
 
-		if which $MAILD >/dev/null
+		if which $mailx >/dev/null
 		then
 
 			if [[ ! -z $NOTIF_SMTP && ! -z $NOTIF_TO && ! -z $NOTIF_FROM && ! -z $NOTIF_FROM_PASS ]]
@@ -82,9 +84,9 @@
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Enviando notificação p/ \"$NOTIF_TO\" via \"$NOTIF_SMTP\" (SMTP)..."
 
-				$MAILD \
+				$mailx \
 				-r "$NOTIF_FROM" \
-				-s "$BASENAME: ${SUBJECT}" \
+				-s "$BASENAME: ${ASSUNTO}" \
 				-S smtp="$NOTIF_SMTP" \
 				-S smtp-use-starttls \
 				-S smtp-auth=login \
@@ -92,19 +94,9 @@
 				-S smtp-auth-password="$NOTIF_FROM_PASS" \
 				-S ssl-verify=ignore \
 				-S sendwait \
-				$NOTIF_TO < /tmp/${BASENAME}_mail.log 2>mailx-notification-`date +%Y%m%d%H%M`.log
+				$NOTIF_TO < $MAILX_LOG &>/dev/null
 
-				if [ $? -eq 0 ]
-				then
-
-					echo -e "\e[92;1m ok\e[m"
-					rm /tmp/${BASENAME}_mail.log
-
-				else
-
-					echo -e "\e[31;1m error\e[m"
-
-				fi
+				test $? -eq 0 && echo -e "\e[92;1m ok\e[m" || echo -e "\e[31;1m error\e[m"
 
 			fi
 
@@ -129,18 +121,18 @@
 				chmod 660 $DIR_ORIGEM/.$DB_NAME
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Renomeando \"$DIR_ORIGEM/$DB_NAME\" p/ \"$DIR_ORIGEM/bkp-$DB_NAME\"..."
-				IONICE="false"; mv $DIR_ORIGEM/$DB_NAME $DIR_ORIGEM/bkp-$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; mv $DIR_ORIGEM/$DB_NAME $DIR_ORIGEM/bkp-$DB_NAME 2>>$MAILX_LOG & status
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Renomeando \"$DIR_ORIGEM/.$DB_NAME\" p/ \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="false"; mv $DIR_ORIGEM/.$DB_NAME $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; mv $DIR_ORIGEM/.$DB_NAME $DIR_ORIGEM/$DB_NAME 2>>$MAILX_LOG & status
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Removendo \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\"..."
-				IONICE="false"; rm $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; rm $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk 2>>$MAILX_LOG & status
 
 			else
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Reinicializando o banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="false"; gfix -online $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; gfix -online $DIR_ORIGEM/$DB_NAME 2>>$MAILX_LOG & status
 
 			fi
 
@@ -157,13 +149,13 @@
 			ERROR="false"
 
 			echo -e "`date +"%d %b %Y %T"` - $INFO Aguardando \"shutdown\" do banco de dados \"$DIR_ORIGEM/$DB_NAME\" (tentativa \"$n\" de \"$SHUTDOWN_LIFETIME\")..."
-			gfix -shut single -tran 60 $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log || ERROR="true"
+			gfix -shut single -tran 60 $DIR_ORIGEM/$DB_NAME 2>>$MAILX_LOG || ERROR="true"
 
 			if [ $ERROR = true ] && [ $n -eq 5 ]
 			then
 
 				echo -ne "`date +"%d %b %Y %T"` - $WARN Tentando \"shutdown\" forçado do banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="false"; gfix -shut single -force 0 $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; gfix -shut single -force 0 $DIR_ORIGEM/$DB_NAME 2>>$MAILX_LOG & status
 
 				break
 
@@ -178,10 +170,10 @@
 		if [ "$ERROR" == "false" ]
 		then
 
-			test -d $DIR_DESTINO/$BASENAME/$BKP_NAME || mkdir -p $DIR_DESTINO/$BASENAME/$BKP_NAME 2>>/tmp/${BASENAME}_mail.log
+			test -d $DIR_DESTINO/$BASENAME/$BKP_NAME || mkdir -p $DIR_DESTINO/$BASENAME/$BKP_NAME 2>>$MAILX_LOG
 
 			echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup do \"$DIR_ORIGEM/$DB_NAME\" p/ \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\"..."
-			IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -B $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk 2>>/tmp/${BASENAME}_mail.log & status
+			IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -B $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk 2>>$MAILX_LOG & status
 
 			if [ "$ERROR" == "false" ]
 			then
@@ -190,19 +182,19 @@
 				then
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Restaurando \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\" p/ \"$DIR_ORIGEM/.$DB_NAME\" (Page size: $DB_PAGE_SIZE)..."
-					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C -P $DB_PAGE_SIZE $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status; st_restore
+					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C -P $DB_PAGE_SIZE $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>$MAILX_LOG & status; st_restore
 
 				else
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Restaurando \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\" p/ \"$DIR_ORIGEM/.$DB_NAME\"..."
-					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status; st_restore
+					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>$MAILX_LOG & status; st_restore
 
 				fi
 
 			else
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Reinicializando o banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="false"; gfix -online $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; gfix -online $DIR_ORIGEM/$DB_NAME 2>>$MAILX_LOG & status
 
 			fi
 
@@ -226,10 +218,11 @@
 		if [ $PERCENTUAL_USO -ge $LIMITE_USO_FS ]
 		then
 
-			df -h $FS >/tmp/${BASENAME}_mail.log
-			echo -e "\n* Aviso gerado durante a execução do \"$0\" no host \"`hostname` em \"`date +%c`\"." >>/tmp/${BASENAME}_mail.log
+			df -h $FS >$MAILX_LOG
+			echo -e "\n* Aviso gerado durante a execução do \"$0\" no host \"`hostname` em \"`date +%c`\"." >>$MAILX_LOG
 
-			SUBJECT="*** ALERTA / CAPACIDADE DE ARMAZENAMENTO DO SISTEMA DE ARQUIVOS";	notification
+			ASSUNTO="*** ALERTA / CAPACIDADE DE ARMAZENAMENTO DO SISTEMA DE ARQUIVOS"
+			enviar_notificacao
 
 		fi
 
@@ -250,7 +243,7 @@
 			cd $DIR_DESTINO/$BASENAME/$BKP_NAME
 
 			echo -ne "`date +"%d %b %Y %T"` - $INFO Compactando arquivos do \".$BASENAME/$BKP_NAME/tar.lst\"..."
-			IONICE="true"; tar -Jcf ${ARQUIVO_TAR}.tar.xz $(cat .$BASENAME/$BKP_NAME/tar.lst | grep ^"${BKP_NAME}-incr") 2>>/tmp/${BASENAME}_mail.log & status
+			IONICE="true"; tar -Jcf ${ARQUIVO_TAR}.tar.xz $(cat .$BASENAME/$BKP_NAME/tar.lst | grep ^"${BKP_NAME}-incr") 2>>$MAILX_LOG & status
 
 			if [ "$ERROR" == "false" ]
 			then
@@ -262,7 +255,7 @@
 				do
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Removendo \"$DIR_DESTINO/$BASENAME/$BKP_NAME/$BKP_FILE\"..."
-					IONICE="false"; rm $BKP_FILE 2>>/tmp/${BASENAME}_mail.log & status
+					IONICE="false"; rm $BKP_FILE 2>>$MAILX_LOG & status
 
 				done < <(cat .$BASENAME/$BKP_NAME/tar.lst | grep ^"${BKP_NAME}-incr")
 
@@ -273,7 +266,7 @@
 			then
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Removendo \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${ARQUIVO_TAR}.tar.xz\"..."
-				IONICE="true"; rm ${ARQUIVO_TAR}.tar.xz 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="true"; rm ${ARQUIVO_TAR}.tar.xz 2>>$MAILX_LOG & status
 
 			fi
 
@@ -320,14 +313,14 @@
 			BKP_FULL="${BKP_NAME}-full-`date +%Y%m%d -d "$DATA_CRIACAO"`"
 			BKP_DAILY="${BKP_NAME}-incr-`date +%Y%m%d -d ${DATE}`0000-01"
 
-			test -d .$BASENAME/$BKP_NAME || mkdir -p .$BASENAME/$BKP_NAME 2>>/tmp/${BASENAME}_mail.log
-			test -d $DIR_DESTINO/$BASENAME/$BKP_NAME || mkdir $DIR_DESTINO/$BASENAME/$BKP_NAME 2>>/tmp/${BASENAME}_mail.log
+			test -d .$BASENAME/$BKP_NAME || mkdir -p .$BASENAME/$BKP_NAME 2>>$MAILX_LOG
+			test -d $DIR_DESTINO/$BASENAME/$BKP_NAME || mkdir $DIR_DESTINO/$BASENAME/$BKP_NAME 2>>$MAILX_LOG
 
 			if [ ! -e $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.tar.xz ] && [ ! -e $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk ]
 			then
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup completo de \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B 0 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B 0 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk 2>>$MAILX_LOG & status
 
 				if [ "$ERROR" = "true" ]
 				then
@@ -353,7 +346,7 @@
 					cd $DIR_DESTINO/$BASENAME/$BKP_NAME
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Compactando \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk\"..."
-					IONICE="true"; tar -Jcf ${BKP_FULL}.tar.xz ${BKP_FULL}.nbk 2>>/tmp/${BASENAME}_mail.log &
+					IONICE="true"; tar -Jcf ${BKP_FULL}.tar.xz ${BKP_FULL}.nbk 2>>$MAILX_LOG &
 					status; test "$ERROR" = "false" || continue
 
 					FILE_SIZE=`du -hs ${BKP_FULL}.tar.xz | cut -f 1`
@@ -363,7 +356,7 @@
 					then
 
 						echo -ne "`date +"%d %b %Y %T"` - $INFO Removendo \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk\"..."
-						IONICE="true"; rm ${BKP_FULL}.nbk 2>>/tmp/${BASENAME}_mail.log & status
+						IONICE="true"; rm ${BKP_FULL}.nbk 2>>$MAILX_LOG & status
 
 					fi
 
@@ -379,14 +372,14 @@
 				then
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Executando varredura e coleta de lixo (sweep) do \"$DIR_ORIGEM/$DB_NAME\"..."
-					IONICE="true"; gfix -sweep $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+					IONICE="true"; gfix -sweep $DIR_ORIGEM/$DB_NAME 2>>$MAILX_LOG & status
 
 					echo -e "\r"
 
 				fi
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup incremental (daily) de \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B 1 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk 2>>/tmp/${BASENAME}_mail.log &
+				IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B 1 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk 2>>$MAILX_LOG &
 				status; test "$ERROR" = "false" || continue
 
 				chmod 644 $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk
@@ -401,14 +394,14 @@
 			else
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup incremental de \"$DIR_ORIGEM/$DB_NAME\"..."
-				source .$BASENAME/$BKP_NAME/nbackup.db 2>>/tmp/${BASENAME}_mail.log
+				source .$BASENAME/$BKP_NAME/nbackup.db 2>>$MAILX_LOG
 
 				if [ $? -eq 0 ]
 				then
 
 					(( BKP_LEVEL++ )); BKP_HOURLY="${BKP_NAME}-incr-`date +%Y%m%d -d ${DATE}`${HM}-`printf "%02d" $BKP_LEVEL`"
 
-					IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B $BKP_LEVEL $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk 2>>/tmp/${BASENAME}_mail.log &
+					IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B $BKP_LEVEL $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk 2>>$MAILX_LOG &
 					status; test "$ERROR" = "false" || continue
 
 					chmod 644 $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk
@@ -423,8 +416,8 @@
 
 					echo -e "\e[31;1m error\e[m"
 
-					SUBJECT='Erro durante a execução de uma rotina de backup!'
-					notification
+					ASSUNTO='Erro durante a execução de uma rotina de backup!'
+					enviar_notificacao
 
 				fi
 
