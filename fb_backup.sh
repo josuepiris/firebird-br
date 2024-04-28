@@ -111,7 +111,7 @@
 	manutencao ()
 	{
 
-		st_restore ()
+		after_restore ()
 		{
 
 			if [ "$ERROR" == "false" ]
@@ -182,12 +182,12 @@
 				then
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Restaurando \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\" p/ \"$DIR_ORIGEM/.$DB_NAME\" (Page size: $DB_PAGE_SIZE)..."
-					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C -P $DB_PAGE_SIZE $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>$MAILX_LOG & status; st_restore
+					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C -P $DB_PAGE_SIZE $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>$MAILX_LOG & status; after_restore
 
 				else
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Restaurando \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\" p/ \"$DIR_ORIGEM/.$DB_NAME\"..."
-					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>$MAILX_LOG & status; st_restore
+					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>$MAILX_LOG & status; after_restore
 
 				fi
 
