@@ -206,21 +206,8 @@
 
 	}
 
-	ext_backup ()
-	{
-
-		if [ -d $EXT_BACKUP ]
-		then
-
-			echo -ne "`date +"%d %b %Y %T"` - $INFO Copiando \"$EXT_BKP_FILE\" p/ \"$EXT_BACKUP\"..."
-			IONICE="true"; cp $EXT_BKP_FILE $EXT_BACKUP 2>>/tmp/${BASENAME}_mail.log & status
-
-		fi
-
-	}
-
 	# Verificar e notificar sobre a capacidade de armazenamento dos discos
-	for FS in $DIR_ORIGEM $DIR_DESTINO $EXT_BACKUP
+	for FS in $DIR_ORIGEM $DIR_DESTINO
 	do
 
 		PERCENTUAL_USO=`df -h $FS | grep ^/dev/sd | awk '{print $5}' | sed 's/%//'`
@@ -270,9 +257,6 @@
 
 				cp $WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst ${ARQUIVO_TAR}.lst
 				rm $WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst
-
-				test -n "$EXT_BACKUP" && EXT_BKP_FILE="$DIR_DESTINO/$BASENAME/$BKP_NAME/${ARQUIVO_TAR}.tar.xz"
-				test -n "$EXT_BACKUP" && ext_backup
 
 			elif [ -e ${ARQUIVO_TAR}.tar.xz ]
 			then
@@ -370,15 +354,7 @@
 						echo -ne "`date +"%d %b %Y %T"` - $INFO Removendo \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk\"..."
 						IONICE="true"; rm ${BKP_FULL}.nbk 2>>/tmp/${BASENAME}_mail.log & status
 
-						test -n "$EXT_BACKUP" && EXT_BKP_FILE="$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.tar.xz"
-						test -n "$EXT_BACKUP" && ext_backup
-
 					fi
-
-				else
-
-					test -n "$EXT_BACKUP" && EXT_BKP_FILE="$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk"
-					test -n "$EXT_BACKUP" && ext_backup
 
 				fi
 
