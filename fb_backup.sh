@@ -30,6 +30,8 @@
 	INFO="[\e[36;1m INFO \e[m]"
 	WARN="[\e[33;1m WARN \e[m]"
 
+	iptables=`which iptables`
+
 	status ()
 	{
 
@@ -136,7 +138,7 @@
 		}
 
 		echo -e "`date +"%d %b %Y %T"` - $INFO Iniciando a rotina de manutenção (backup/restore) do banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-		$IPTABLES_BIN -I INPUT 1 -p tcp --syn --dport 3050 -j REJECT
+		$iptables -I INPUT 1 -p tcp --syn --dport 3050 -j REJECT
 
 		n=1
 
@@ -201,7 +203,7 @@
 
 		fi
 
-		$IPTABLES_BIN -D INPUT -p tcp --syn --dport 3050 -j REJECT
+		$iptables -D INPUT -p tcp --syn --dport 3050 -j REJECT
 		echo -e "\r"
 
 	}
