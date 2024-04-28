@@ -130,7 +130,7 @@
 			else
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Reinicializando o banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="false"; $FIREBIRD_BIN/gfix -online $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; gfix -online $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
 
 			fi
 
@@ -147,13 +147,13 @@
 			ERROR="false"
 
 			echo -e "`date +"%d %b %Y %T"` - $INFO Aguardando \"shutdown\" do banco de dados \"$DIR_ORIGEM/$DB_NAME\" (tentativa \"$n\" de \"$SHUTDOWN_LIFETIME\")..."
-			$FIREBIRD_BIN/gfix -shut single -tran 60 $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log || ERROR="true"
+			gfix -shut single -tran 60 $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log || ERROR="true"
 
 			if [ $ERROR = true ] && [ $n -eq 5 ]
 			then
 
 				echo -ne "`date +"%d %b %Y %T"` - $WARN Tentando \"shutdown\" forçado do banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="false"; $FIREBIRD_BIN/gfix -shut single -force 0 $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; gfix -shut single -force 0 $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
 
 				break
 
@@ -171,7 +171,7 @@
 			test -d $DIR_DESTINO/$BASENAME/$BKP_NAME || mkdir -p $DIR_DESTINO/$BASENAME/$BKP_NAME 2>>/tmp/${BASENAME}_mail.log
 
 			echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup do \"$DIR_ORIGEM/$DB_NAME\" p/ \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\"..."
-			IONICE="true"; $FIREBIRD_BIN/gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -B $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk 2>>/tmp/${BASENAME}_mail.log & status
+			IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -B $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk 2>>/tmp/${BASENAME}_mail.log & status
 
 			if [ "$ERROR" == "false" ]
 			then
@@ -180,19 +180,19 @@
 				then
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Restaurando \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\" p/ \"$DIR_ORIGEM/.$DB_NAME\" (Page size: $DB_PAGE_SIZE)..."
-					IONICE="true"; $FIREBIRD_BIN/gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C -P $DB_PAGE_SIZE $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status; st_restore
+					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C -P $DB_PAGE_SIZE $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status; st_restore
 
 				else
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Restaurando \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk\" p/ \"$DIR_ORIGEM/.$DB_NAME\"..."
-					IONICE="true"; $FIREBIRD_BIN/gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status; st_restore
+					IONICE="true"; gbak -USER $DB_USER -PASSWORD $DB_PASSWORD -C $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_NAME}.fbk $DIR_ORIGEM/.$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status; st_restore
 
 				fi
 
 			else
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Reinicializando o banco de dados \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="false"; $FIREBIRD_BIN/gfix -online $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="false"; gfix -online $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
 
 			fi
 
@@ -279,7 +279,7 @@
 		for DB_NAME in $DATABASES
 		do
 
-			DATA_CRIACAO=`$FIREBIRD_BIN/gstat $DIR_ORIGEM/$DB_NAME -h | grep "Creation date" | awk '{print substr($0, index($0,$3))}'`
+			DATA_CRIACAO=`gstat $DIR_ORIGEM/$DB_NAME -h | grep "Creation date" | awk '{print substr($0, index($0,$3))}'`
 			DIAS_CRIACAO=$((($(date +%s)-$(date +%s --date "$DATA_CRIACAO"))/(3600*24)))
 
 			if [ $DIAS_CRIACAO -ge $MANUTENCAO_DIAS ]
@@ -305,7 +305,7 @@
 		else
 
 			BKP_NAME=`echo $DB_NAME | cut -d "." -f 1`
-			DATA_CRIACAO=`$FIREBIRD_BIN/gstat $DIR_ORIGEM/$DB_NAME -h | grep "Creation date" | awk '{print substr($0, index($0,$3))}'`
+			DATA_CRIACAO=`gstat $DIR_ORIGEM/$DB_NAME -h | grep "Creation date" | awk '{print substr($0, index($0,$3))}'`
 
 			BKP_FULL="${BKP_NAME}-full-`date +%Y%m%d -d "$DATA_CRIACAO"`"
 			BKP_DAILY="${BKP_NAME}-incr-`date +%Y%m%d -d ${DATE}`0000-01"
@@ -317,7 +317,7 @@
 			then
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup completo de \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="true"; $FIREBIRD_BIN/nbackup -U $DB_USER -P $DB_PASSWORD -B 0 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk 2>>/tmp/${BASENAME}_mail.log & status
+				IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B 0 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk 2>>/tmp/${BASENAME}_mail.log & status
 
 				if [ "$ERROR" = "true" ]
 				then
@@ -326,7 +326,7 @@
 					rm -f $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk && echo -e "\e[92;1m ok\e[m" || echo -e "\e[31;1m error\e[m"
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Desbloqueando o banco de dados principal mesclando o arquivo delta (\"$DIR_ORIGEM/${DB_NAME}.delta\")..."
-					$FIREBIRD_BIN/nbackup -N $DIR_ORIGEM/$DB_NAME && echo -e "\e[92;1m ok\e[m" || echo -e "\e[31;1m error\e[m"
+					nbackup -N $DIR_ORIGEM/$DB_NAME && echo -e "\e[92;1m ok\e[m" || echo -e "\e[31;1m error\e[m"
 
 					continue
 
@@ -363,20 +363,20 @@
 			then
 
 				# Database Housekeeping And Garbage Collection
-				DATA_CRIACAO=`$FIREBIRD_BIN/gstat $DIR_ORIGEM/$DB_NAME -h | grep "Creation date" | awk '{print substr($0, index($0,$3))}' | xargs -I {} date +%m/%d/%Y -d "{}"`
+				DATA_CRIACAO=`gstat $DIR_ORIGEM/$DB_NAME -h | grep "Creation date" | awk '{print substr($0, index($0,$3))}' | xargs -I {} date +%m/%d/%Y -d "{}"`
 
 				if [ "$SWEEP" == "true" ] && [ "$DATA_CRIACAO" != "$DATE" ]
 				then
 
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Executando varredura e coleta de lixo (sweep) do \"$DIR_ORIGEM/$DB_NAME\"..."
-					IONICE="true"; $FIREBIRD_BIN/gfix -sweep $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
+					IONICE="true"; gfix -sweep $DIR_ORIGEM/$DB_NAME 2>>/tmp/${BASENAME}_mail.log & status
 
 					echo -e "\r"
 
 				fi
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup incremental (daily) de \"$DIR_ORIGEM/$DB_NAME\"..."
-				IONICE="true"; $FIREBIRD_BIN/nbackup -U $DB_USER -P $DB_PASSWORD -B 1 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk 2>>/tmp/${BASENAME}_mail.log &
+				IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B 1 $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk 2>>/tmp/${BASENAME}_mail.log &
 				status; test "$ERROR" = "false" || continue
 
 				chmod 644 $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk
@@ -398,7 +398,7 @@
 
 					(( BKP_LEVEL++ )); BKP_HOURLY="${BKP_NAME}-incr-`date +%Y%m%d -d ${DATE}`${HM}-`printf "%02d" $BKP_LEVEL`"
 
-					IONICE="true"; $FIREBIRD_BIN/nbackup -U $DB_USER -P $DB_PASSWORD -B $BKP_LEVEL $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk 2>>/tmp/${BASENAME}_mail.log &
+					IONICE="true"; nbackup -U $DB_USER -P $DB_PASSWORD -B $BKP_LEVEL $DIR_ORIGEM/$DB_NAME $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk 2>>/tmp/${BASENAME}_mail.log &
 					status; test "$ERROR" = "false" || continue
 
 					chmod 644 $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk
