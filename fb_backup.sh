@@ -12,7 +12,6 @@
 	# O primeiro (e único) argumento deve ser o nome do arquivo de configuração.
 	test $# -eq 1 && CONFIG=$1 || exit
 
-	WORK_DIR=`pwd`
 	BASENAME=`basename $0 | cut -d . -f 1`
 
 	# Não iniciar uma nova instância caso já houver uma em execução;
@@ -20,7 +19,7 @@
 	echo $$ >/var/run/${BASENAME}.pid
 
 	# Leia o arquivo de configuração, ou saia caso o mesmo não existir.
-	source $WORK_DIR/$CONFIG 2>/dev/null || exit
+	source $CONFIG 2>/dev/null || exit
 
 	HM=`date +%H%M`
 	DATE=`date +%m/%d/%Y`
@@ -83,7 +82,7 @@
 				-S smtp-auth-password="$NOTIF_FROM_PASS" \
 				-S ssl-verify=ignore \
 				-S sendwait \
-				$NOTIF_TO < /tmp/${BASENAME}_mail.log 2>${WORK_DIR}/mailx-notification-`date +%Y%m%d%H%M`.log
+				$NOTIF_TO < /tmp/${BASENAME}_mail.log 2>mailx-notification-`date +%Y%m%d%H%M`.log
 
 				if [ $? -eq 0 ]
 				then
@@ -231,17 +230,17 @@
 	do
 
 		BKP_NAME=`echo $DB_NAME | cut -d "." -f 1`
-		source $WORK_DIR/.$BASENAME/$BKP_NAME/tar.db 2>/dev/null
+		source .$BASENAME/$BKP_NAME/tar.db 2>/dev/null
 
-		if [ $? -eq 0 ] && [ "$DATE" != "$BKP_DATE" ] && [ -e "$WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst" ] && [ -d "$DIR_DESTINO/$BASENAME/$BKP_NAME" ]
+		if [ $? -eq 0 ] && [ "$DATE" != "$BKP_DATE" ] && [ -e ".$BASENAME/$BKP_NAME/tar.lst" ] && [ -d "$DIR_DESTINO/$BASENAME/$BKP_NAME" ]
 		then
 
 			ARQUIVO_TAR="${BKP_NAME}-incr-`date +%Y%m%d -d "$BKP_DATE"`"
 
 			cd $DIR_DESTINO/$BASENAME/$BKP_NAME
 
-			echo -ne "`date +"%d %b %Y %T"` - $INFO Compactando arquivos do \"$WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst\"..."
-			IONICE="true"; tar -Jcf ${ARQUIVO_TAR}.tar.xz $(cat $WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst | grep ^"${BKP_NAME}-incr") 2>>/tmp/${BASENAME}_mail.log & status
+			echo -ne "`date +"%d %b %Y %T"` - $INFO Compactando arquivos do \".$BASENAME/$BKP_NAME/tar.lst\"..."
+			IONICE="true"; tar -Jcf ${ARQUIVO_TAR}.tar.xz $(cat .$BASENAME/$BKP_NAME/tar.lst | grep ^"${BKP_NAME}-incr") 2>>/tmp/${BASENAME}_mail.log & status
 
 			if [ "$ERROR" == "false" ]
 			then
@@ -255,10 +254,10 @@
 					echo -ne "`date +"%d %b %Y %T"` - $INFO Removendo \"$DIR_DESTINO/$BASENAME/$BKP_NAME/$BKP_FILE\"..."
 					IONICE="false"; rm $BKP_FILE 2>>/tmp/${BASENAME}_mail.log & status
 
-				done < <(cat $WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst | grep ^"${BKP_NAME}-incr")
+				done < <(cat .$BASENAME/$BKP_NAME/tar.lst | grep ^"${BKP_NAME}-incr")
 
-				cp $WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst ${ARQUIVO_TAR}.lst
-				rm $WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst
+				cp .$BASENAME/$BKP_NAME/tar.lst ${ARQUIVO_TAR}.lst
+				rm .$BASENAME/$BKP_NAME/tar.lst
 
 			elif [ -e ${ARQUIVO_TAR}.tar.xz ]
 			then
@@ -311,7 +310,7 @@
 			BKP_FULL="${BKP_NAME}-full-`date +%Y%m%d -d "$DATA_CRIACAO"`"
 			BKP_DAILY="${BKP_NAME}-incr-`date +%Y%m%d -d ${DATE}`0000-01"
 
-			test -d $WORK_DIR/.$BASENAME/$BKP_NAME || mkdir -p $WORK_DIR/.$BASENAME/$BKP_NAME 2>>/tmp/${BASENAME}_mail.log
+			test -d .$BASENAME/$BKP_NAME || mkdir -p .$BASENAME/$BKP_NAME 2>>/tmp/${BASENAME}_mail.log
 			test -d $DIR_DESTINO/$BASENAME/$BKP_NAME || mkdir $DIR_DESTINO/$BASENAME/$BKP_NAME 2>>/tmp/${BASENAME}_mail.log
 
 			if [ ! -e $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.tar.xz ] && [ ! -e $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_FULL}.nbk ]
@@ -385,14 +384,14 @@
 				FILE_SIZE=`du -hs $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk | cut -f 1`
 				echo -e "`date +"%d %b %Y %T"` - $INFO Arquivo: \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_DAILY}.nbk\" ($FILE_SIZE)."
 
-				echo "BKP_DATE=$DATE" >$WORK_DIR/.$BASENAME/$BKP_NAME/tar.db
-				echo "BKP_LEVEL=1" >$WORK_DIR/.$BASENAME/$BKP_NAME/nbackup.db
-				echo -e "${BKP_FULL}.nbk\n${BKP_DAILY}.nbk" >$WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst
+				echo "BKP_DATE=$DATE" >.$BASENAME/$BKP_NAME/tar.db
+				echo "BKP_LEVEL=1" >.$BASENAME/$BKP_NAME/nbackup.db
+				echo -e "${BKP_FULL}.nbk\n${BKP_DAILY}.nbk" >.$BASENAME/$BKP_NAME/tar.lst
 
 			else
 
 				echo -ne "`date +"%d %b %Y %T"` - $INFO Executando backup incremental de \"$DIR_ORIGEM/$DB_NAME\"..."
-				source $WORK_DIR/.$BASENAME/$BKP_NAME/nbackup.db 2>>/tmp/${BASENAME}_mail.log
+				source .$BASENAME/$BKP_NAME/nbackup.db 2>>/tmp/${BASENAME}_mail.log
 
 				if [ $? -eq 0 ]
 				then
@@ -407,8 +406,8 @@
 					FILE_SIZE=`du -hs $DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk | cut -f 1`
 					echo -e "`date +"%d %b %Y %T"` - $INFO Arquivo: \"$DIR_DESTINO/$BASENAME/$BKP_NAME/${BKP_HOURLY}.nbk\" ($FILE_SIZE)."
 
-					echo "${BKP_HOURLY}.nbk" >>$WORK_DIR/.$BASENAME/$BKP_NAME/tar.lst
-					echo "BKP_LEVEL=$BKP_LEVEL" >$WORK_DIR/.$BASENAME/$BKP_NAME/nbackup.db
+					echo "${BKP_HOURLY}.nbk" >>.$BASENAME/$BKP_NAME/tar.lst
+					echo "BKP_LEVEL=$BKP_LEVEL" >.$BASENAME/$BKP_NAME/nbackup.db
 
 				else
 
